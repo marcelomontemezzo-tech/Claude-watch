@@ -1,0 +1,104 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+@theme {
+  --color-bg: oklch(13% 0.012 260);
+  --color-bg-elev: oklch(16% 0.014 260);
+  --color-bg-card: oklch(18% 0.014 260);
+  --color-bg-hover: oklch(22% 0.016 260);
+  --color-border: oklch(28% 0.014 260);
+  --color-border-strong: oklch(36% 0.018 260);
+  --color-fg: oklch(96% 0.005 260);
+  --color-fg-muted: oklch(72% 0.012 260);
+  --color-fg-dim: oklch(52% 0.012 260);
+  --color-accent: oklch(70% 0.18 260);
+  --color-accent-soft: oklch(34% 0.10 260);
+  --color-success: oklch(72% 0.16 145);
+  --color-warning: oklch(78% 0.16 75);
+  --color-danger: oklch(68% 0.20 25);
+  --color-info: oklch(72% 0.13 220);
+
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11", "calt";
+  letter-spacing: -0.005em;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.pulse-soft {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}
+
+@keyframes node-running-pulse {
+  0%, 100% { box-shadow: 0 0 14px var(--color-warning), 0 0 0 2px var(--color-warning); }
+  50% { box-shadow: 0 0 24px var(--color-warning), 0 0 0 3px var(--color-warning); }
+}
+.node-running-pulse {
+  animation: node-running-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes flow-dash {
+  to { stroke-dashoffset: -16; }
+}
+
+.react-flow__node {
+  font-family: var(--font-sans);
+}
+.react-flow__edge.parallel .react-flow__edge-path {
+  stroke-dasharray: 4 4;
+  animation: flow-dash 1.2s linear infinite;
+}
+.react-flow__renderer {
+  background: transparent;
+}
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__background {
+  opacity: 0.5;
+}
