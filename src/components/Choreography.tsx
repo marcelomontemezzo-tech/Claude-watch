@@ -20,6 +20,7 @@ import type {
 } from "@shared/types.ts";
 import { useDashboard } from "../hooks/useDashboard.ts";
 import { cn, formatDuration, relativeTime } from "../lib/utils.ts";
+import { LiveSubagentTerminals } from "./LiveSubagentTerminals.tsx";
 
 const NODE_W = 156;
 const NODE_H = 60;
@@ -304,7 +305,7 @@ export function Choreography(): JSX.Element {
           <Legend swatch="var(--color-danger)" label="escalate" dashed />
         </div>
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-h-0">
         <ReactFlow
           onNodeClick={(_e, n) => {
             const node = (n.data as { node?: ChoreographyNode }).node;
@@ -362,6 +363,7 @@ export function Choreography(): JSX.Element {
           />
         </ReactFlow>
       </div>
+      <LiveSubagentTerminals />
     </div>
   );
 }

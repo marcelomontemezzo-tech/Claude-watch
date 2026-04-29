@@ -33,6 +33,7 @@ export interface AgentRun {
   prompt?: string;
   outputPreview?: string;
   errorMessage?: string;
+  recentEvents?: TimelineEvent[];
 }
 
 export interface FlowEdge {
@@ -295,6 +296,27 @@ export interface DashboardSnapshot {
   recentEvents: TimelineEvent[];
   totals: UserTotals;
   usage: UsageDashboard;
+}
+
+export interface EditorSource {
+  id: string;
+  name: string;
+  kind: "agent" | "skill" | "obsidian";
+  source: "project" | "global" | "plugin" | "obsidian";
+  pluginName?: string;
+  projectKey?: string;
+  projectCwd?: string;
+  filePath: string;
+  readonly: boolean;
+  description?: string;
+  mtimeMs: number;
+}
+
+export interface EditorFile {
+  source: EditorSource;
+  content: string;
+  frontmatter: Record<string, string>;
+  body: string;
 }
 
 export type ServerEvent =

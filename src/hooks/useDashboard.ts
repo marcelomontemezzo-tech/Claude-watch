@@ -2,6 +2,10 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { DashboardSnapshot, ServerEvent } from "@shared/types.ts";
 
+type TopTab = "monitor" | "editor";
+type EditorSourceFilter = "all" | "project" | "global" | "plugin" | "obsidian";
+type MonitorDrawer = "tokens" | "timeline" | "agents" | null;
+
 interface DashboardState {
   snapshot: DashboardSnapshot | null;
   connected: boolean;
@@ -12,6 +16,12 @@ interface DashboardState {
   scrub: { enabled: boolean; atTime: number | null; speed: number; playing: boolean };
   notificationsEnabled: boolean;
   search: string;
+  topTab: TopTab;
+  monitorDrawer: MonitorDrawer;
+  editorSelectedId: string | null;
+  editorSourceFilter: EditorSourceFilter;
+  editorProjectFilter: string | null;
+  editorSearch: string;
   setSnapshot: (snap: DashboardSnapshot) => void;
   setConnected: (connected: boolean) => void;
   selectProject: (key: string | null) => void;
@@ -21,6 +31,12 @@ interface DashboardState {
   setScrub: (patch: Partial<DashboardState["scrub"]>) => void;
   setNotifications: (v: boolean) => void;
   setSearch: (s: string) => void;
+  setTopTab: (t: TopTab) => void;
+  setMonitorDrawer: (d: MonitorDrawer) => void;
+  setEditorSelectedId: (id: string | null) => void;
+  setEditorSourceFilter: (f: EditorSourceFilter) => void;
+  setEditorProjectFilter: (key: string | null) => void;
+  setEditorSearch: (s: string) => void;
 }
 
 export const useDashboard = create<DashboardState>()(
@@ -35,6 +51,12 @@ export const useDashboard = create<DashboardState>()(
       scrub: { enabled: false, atTime: null, speed: 1, playing: false },
       notificationsEnabled: false,
       search: "",
+      topTab: "monitor",
+      monitorDrawer: null,
+      editorSelectedId: null,
+      editorSourceFilter: "all",
+      editorProjectFilter: null,
+      editorSearch: "",
       setSnapshot: (snap) =>
         set((s) => ({
           snapshot: snap,
@@ -48,6 +70,12 @@ export const useDashboard = create<DashboardState>()(
       setScrub: (patch) => set((s) => ({ scrub: { ...s.scrub, ...patch } })),
       setNotifications: (v) => set({ notificationsEnabled: v }),
       setSearch: (s) => set({ search: s }),
+      setTopTab: (t) => set({ topTab: t }),
+      setMonitorDrawer: (d) => set({ monitorDrawer: d }),
+      setEditorSelectedId: (id) => set({ editorSelectedId: id }),
+      setEditorSourceFilter: (f) => set({ editorSourceFilter: f }),
+      setEditorProjectFilter: (key) => set({ editorProjectFilter: key }),
+      setEditorSearch: (s) => set({ editorSearch: s }),
     }),
     {
       name: "claude-watch-state",
@@ -56,6 +84,9 @@ export const useDashboard = create<DashboardState>()(
         pipelineFilter: s.pipelineFilter,
         centerTab: s.centerTab,
         notificationsEnabled: s.notificationsEnabled,
+        topTab: s.topTab,
+        editorSourceFilter: s.editorSourceFilter,
+        editorProjectFilter: s.editorProjectFilter,
       }),
     },
   ),

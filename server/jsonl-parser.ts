@@ -136,6 +136,9 @@ export async function parseJsonlFile(filePath: string): Promise<ParsedSession | 
   const agentRuns = new Map<string, AgentRun>();
   const events: TimelineEvent[] = [];
   const turnTaskCalls = new Map<number, ToolCall[]>();
+  const parentByUuid = new Map<string, string | null>();
+  const spawnerByLineUuid = new Map<string, string>(); // lineUuid -> taskToolUseId
+  const eventLineUuid = new Map<string, string>(); // event.id -> lineUuid
 
   let lineNo = 0;
   for await (const line of rl) {
@@ -155,6 +158,9 @@ export async function parseJsonlFile(filePath: string): Promise<ParsedSession | 
     if (raw.gitBranch && !gitBranch) gitBranch = raw.gitBranch;
     if (ts && !startedAt) startedAt = ts;
     if (ts) lastActivityAt = Math.max(lastActivityAt, ts);
+
+    const lineUuid = raw.uuid;
+    if (lineUuid) parentByUuid.set(lineUuid, raw.parentUuid ?? null);
 
     if (raw.type === "user" && !raw.isSidechain) {
       const content = (raw.message as { content?: unknown } | undefined)?.content;
@@ -179,14 +185,16 @@ export async function parseJsonlFile(filePath: string): Promise<ParsedSession | 
               content: text,
               endedAt: ts,
             });
+            const evId = `${sessionId}:result:${b.tool_use_id}:${lineNo}`;
             events.push({
-              id: `${sessionId}:result:${b.tool_use_id}:${lineNo}`,
+              id: evId,
               kind: "tool_result",
               timestamp: ts,
               sessionId,
               label: `result`,
               detail: text,
             });
+            if (lineUuid) eventLineUuid.set(evId, lineUuid);
           }
         }
         continue;
@@ -240,9 +248,11 @@ export async function parseJsonlFile(filePath: string): Promise<ParsedSession | 
               const list = turnTaskCalls.get(turnIndex) ?? [];
               list.push(call);
               turnTaskCalls.set(turnIndex, list);
+              if (lineUuid) spawnerByLineUuid.set(lineUuid, b.id);
             }
+            const evId = `${sessionId}:tool:${b.id}`;
             events.push({
-              id: `${sessionId}:tool:${b.id}`,
+              id: evId,
               kind: "tool_call",
               timestamp: ts,
               sessionId,
@@ -251,15 +261,18 @@ export async function parseJsonlFile(filePath: string): Promise<ParsedSession | 
               toolName: b.name,
               agentRunId: isSpawner ? b.id : undefined,
             });
+            if (lineUuid) eventLineUuid.set(evId, lineUuid);
           } else if (b.type === "text" && b.text) {
+            const evId = `${sessionId}:asst:${lineNo}:${b.id ?? "text"}`;
             events.push({
-              id: `${sessionId}:asst:${lineNo}:${b.id ?? "text"}`,
+              id: evId,
               kind: "assistant_message",
               timestamp: ts,
               sessionId,
               label: "Assistant",
               detail: previewOf(b.text),
             });
+            if (lineUuid) eventLineUuid.set(evId, lineUuid);
           }
         }
       }
@@ -269,6 +282,36 @@ export async function parseJsonlFile(filePath: string): Promise<ParsedSession | 
   }
 
   if (!sessionId) return null;
+
+  // Attribute events to subagent runs by walking parentUuid chain.
+  const ATTRIBUTION_DEPTH = 80;
+  function findOwningSpawner(startUuid: string): string | null {
+    let cur: string | null | undefined = startUuid;
+    let hops = 0;
+    const seen = new Set<string>();
+    while (cur && hops < ATTRIBUTION_DEPTH) {
+      if (seen.has(cur)) return null;
+      seen.add(cur);
+      const spawner = spawnerByLineUuid.get(cur);
+      if (spawner) return spawner;
+      cur = parentByUuid.get(cur) ?? null;
+      hops += 1;
+    }
+    return null;
+  }
+
+  const eventsByAgent = new Map<string, TimelineEvent[]>();
+  for (const ev of events) {
+    const lu = eventLineUuid.get(ev.id);
+    if (!lu) continue;
+    const owner = findOwningSpawner(lu);
+    if (!owner) continue;
+    if (ev.agentRunId === owner) continue; // spawn event itself; already tagged
+    if (!ev.agentRunId) ev.agentRunId = owner;
+    const list = eventsByAgent.get(owner) ?? [];
+    list.push(ev);
+    eventsByAgent.set(owner, list);
+  }
 
   // Mark parallel groups
   for (const [, calls] of turnTaskCalls) {
@@ -345,6 +388,18 @@ export async function parseJsonlFile(filePath: string): Promise<ParsedSession | 
         : undefined,
       outputPreview: result?.content,
       errorMessage: result?.isError ? result.content : undefined,
+      recentEvents: (eventsByAgent.get(call.toolUseId) ?? [])
+        .slice(-30)
+        .map((e) => ({
+          id: e.id,
+          kind: e.kind,
+          timestamp: e.timestamp,
+          sessionId: e.sessionId,
+          label: e.label,
+          detail: e.detail,
+          toolName: e.toolName,
+          agentRunId: e.agentRunId,
+        })),
     };
     agentRuns.set(run.id, run);
     edges.push({
