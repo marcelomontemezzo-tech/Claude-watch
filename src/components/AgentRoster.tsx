@@ -26,7 +26,12 @@ export function AgentRoster(): JSX.Element {
 
   if (agents.length === 0) {
     return (
-      <div className="p-6 text-fg-dim text-xs">No agents or skills detected for this project.</div>
+      <div className="flex flex-col gap-2 p-5">
+        <span className="text-[10px] uppercase tracking-[0.2em] text-fg-dim">Subagents</span>
+        <p className="text-fg-dim text-xs italic mt-1">
+          No subagents discovered for this project.
+        </p>
+      </div>
     );
   }
 

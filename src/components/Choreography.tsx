@@ -189,6 +189,7 @@ const ALL_KINDS: ChoreographyEdgeKind[] = [
 
 export function Choreography(): JSX.Element {
   const snapshot = useDashboard((s) => s.snapshot);
+  const connected = useDashboard((s) => s.connected);
   const selected = useDashboard((s) => s.selectedProjectKey);
   const flow = snapshot?.flow;
   const key = selected ?? snapshot?.activeProjectKey ?? null;
@@ -248,10 +249,26 @@ export function Choreography(): JSX.Element {
     [choreo, pipeline],
   );
 
+  if (!snapshot || !connected) {
+    return <ChoreographySkeleton />;
+  }
+
+  if (!key) {
+    return (
+      <div className="grid h-full place-items-center px-8">
+        <p className="text-fg-dim text-xs italic">
+          Select a project to inspect its choreography.
+        </p>
+      </div>
+    );
+  }
+
   if (!choreo || !layouted) {
     return (
-      <div className="grid h-full place-items-center text-fg-dim text-xs">
-        Choreography unavailable. Project has no `agent-*` skills.
+      <div className="grid h-full place-items-center px-8">
+        <p className="text-fg-dim text-xs italic">
+          Choreography unavailable. Project has no `agent-*` skills.
+        </p>
       </div>
     );
   }
@@ -342,6 +359,29 @@ export function Choreography(): JSX.Element {
             className="!bg-bg-elev !border-border [&>button]:!bg-bg-elev [&>button]:!border-border [&>button]:!text-fg-muted"
           />
         </ReactFlow>
+      </div>
+    </div>
+  );
+}
+
+function ChoreographySkeleton(): JSX.Element {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="border-b border-border px-4 py-2 bg-bg-elev/40 flex items-center gap-3">
+        <div className="bg-bg-elev/60 animate-pulse rounded-md h-4 w-20" />
+        <div className="bg-bg-elev/60 animate-pulse rounded-md h-4 w-32" />
+      </div>
+      <div className="border-b border-border px-4 py-2 bg-bg-elev/40 flex items-center gap-2">
+        {[40, 60, 56, 48].map((w, i) => (
+          <div key={i} className="bg-bg-elev/60 animate-pulse rounded-sm h-5" style={{ width: w }} />
+        ))}
+      </div>
+      <div className="flex-1 grid place-items-center">
+        <div className="grid grid-cols-4 gap-6 px-8">
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <div key={i} className="bg-bg-elev/60 animate-pulse rounded-md h-[60px] w-[156px]" />
+          ))}
+        </div>
       </div>
     </div>
   );

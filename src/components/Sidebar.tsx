@@ -55,7 +55,19 @@ export function Sidebar(): JSX.Element {
   }, [snapshot, search]);
 
   if (!snapshot) {
-    return <div className="p-6 text-fg-dim text-xs">loading projects…</div>;
+    return (
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-fg-dim">Projects</span>
+        </div>
+        <div className="bg-bg-elev/60 animate-pulse rounded-md h-7" />
+        <ul className="flex flex-col gap-1">
+          {[0, 1, 2, 3].map((i) => (
+            <li key={i} className="bg-bg-elev/60 animate-pulse rounded-md h-12" />
+          ))}
+        </ul>
+      </div>
+    );
   }
 
   return (
@@ -148,8 +160,13 @@ export function Sidebar(): JSX.Element {
             </li>
           );
         })}
-        {projects.length === 0 && (
+        {projects.length === 0 && snapshot.projects.length > 0 && (
           <li className="text-fg-dim text-[11px] italic px-2 py-3">no matches for "{search}"</li>
+        )}
+        {snapshot.projects.length === 0 && (
+          <li className="text-fg-dim text-[11px] italic px-2 py-3 leading-relaxed">
+            No Claude Code sessions detected yet. Start one to populate this dashboard.
+          </li>
         )}
       </ul>
     </div>

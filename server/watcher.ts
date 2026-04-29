@@ -44,6 +44,30 @@ export class WatcherStore extends EventEmitter {
   private parsing = new Set<string>();
   private lastSnapshotAt = 0;
   private debounceTimer: NodeJS.Timeout | null = null;
+  private choreoCache = new WeakMap<object, Choreography | null>();
+  private memoryCache = new Map<string, { sig: string; bank: MemoryBank }>();
+
+  private cachedChoreography(_projectKey: string, list: ReturnType<typeof scanAgents>): Choreography | null {
+    const cached = this.choreoCache.get(list);
+    if (cached !== undefined) return cached;
+    const built = buildChoreography(list) ?? null;
+    this.choreoCache.set(list, built);
+    return built;
+  }
+
+  private cachedMemoryBank(projectKey: string, cwd: string): MemoryBank {
+    const memDir = path.join(cwd, ".claude", "memory");
+    let mtime = 0;
+    try {
+      mtime = fs.statSync(memDir).mtimeMs;
+    } catch {}
+    const sig = `${cwd}:${mtime}`;
+    const cached = this.memoryCache.get(projectKey);
+    if (cached && cached.sig === sig) return cached.bank;
+    const bank = buildMemoryBank(projectKey, cwd);
+    this.memoryCache.set(projectKey, { sig, bank });
+    return bank;
+  }
 
   async start(): Promise<void> {
     if (!fs.existsSync(PROJECTS_DIR)) {
@@ -193,9 +217,9 @@ export class WatcherStore extends EventEmitter {
     for (const proj of projects) {
       const list = scanAgents(proj.cwd);
       agentsByProject[proj.projectKey] = list;
-      const choreo = buildChoreography(list);
+      const choreo = this.cachedChoreography(proj.projectKey, list);
       if (choreo) choreographyByProject[proj.projectKey] = choreo;
-      memoryByProject[proj.projectKey] = buildMemoryBank(proj.projectKey, proj.cwd);
+      memoryByProject[proj.projectKey] = this.cachedMemoryBank(proj.projectKey, proj.cwd);
     }
 
     void cacheHitRate;

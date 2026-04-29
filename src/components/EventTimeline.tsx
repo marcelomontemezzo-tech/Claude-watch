@@ -35,7 +35,9 @@ export function EventTimeline(): JSX.Element {
           </li>
         ))}
         {events.length === 0 && (
-          <li className="text-fg-dim italic">no events yet</li>
+          <li className="text-fg-dim text-xs italic px-1 py-2">
+            Timeline will appear once Claude takes its first action.
+          </li>
         )}
       </ol>
     </div>

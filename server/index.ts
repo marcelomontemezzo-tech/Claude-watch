@@ -25,8 +25,12 @@ async function main(): Promise<void> {
   app.use(express.json({ limit: "1mb" }));
 
   let lastSnapshot: DashboardSnapshot = store.buildSnapshot();
+  let lastSnapshotHash = snapshotHash(lastSnapshot);
   store.on("snapshot", (snap: DashboardSnapshot) => {
+    const hash = snapshotHash(snap);
     lastSnapshot = snap;
+    if (hash === lastSnapshotHash) return;
+    lastSnapshotHash = hash;
     broadcast({ type: "snapshot", payload: snap });
   });
 
@@ -205,3 +209,12 @@ main().catch((err) => {
   console.error("[claude-watch] fatal", err);
   process.exit(1);
 });
+
+function snapshotHash(snap: DashboardSnapshot): string {
+  const projectsKey = snap.projects
+    .map((p) => `${p.projectKey}:${p.lastActivityAt}:${p.totalTokens}:${p.isLive ? 1 : 0}`)
+    .join(";");
+  const eventsLen = snap.recentEvents?.length ?? 0;
+  const flowKey = snap.flow ? `${snap.flow.nodes.length}n${snap.flow.edges.length}e` : "0";
+  return `${snap.activeProjectKey ?? ""}|${projectsKey}|${eventsLen}|${flowKey}`;
+}

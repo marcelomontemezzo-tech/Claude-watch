@@ -40,23 +40,70 @@ export default function App(): JSX.Element {
         <Header connected={connected} />
       </div>
       <aside className="row-start-2 border-r border-border bg-bg-elev/40 overflow-y-auto">
-        <Sidebar />
+        <ErrorBoundary>
+          <Sidebar />
+        </ErrorBoundary>
       </aside>
       <main className="row-start-2 overflow-hidden">
         <ErrorBoundary>
           {snapshot ? (
-            <DashboardLayout />
+            snapshot.projects.length === 0 ? (
+              <EmptyDashboard />
+            ) : (
+              <DashboardLayout />
+            )
           ) : (
-            <div className="grid h-full place-items-center text-fg-dim">
-              <div className="flex items-center gap-3">
-                <span className="size-2 rounded-full bg-accent pulse-soft" />
-                <span className="text-sm tracking-wide">awaiting first snapshot…</span>
-              </div>
-            </div>
+            <AwaitingSnapshot connected={connected} />
           )}
         </ErrorBoundary>
       </main>
       <AgentModal />
+    </div>
+  );
+}
+
+function AwaitingSnapshot({ connected }: { connected: boolean }): JSX.Element {
+  return (
+    <div className="grid h-full place-items-center p-8">
+      <div className="flex flex-col items-center gap-4 max-w-md">
+        <div className="flex items-center gap-3 text-fg-dim">
+          <span
+            className={
+              connected
+                ? "size-2 rounded-full bg-accent pulse-soft"
+                : "size-2 rounded-full bg-danger"
+            }
+          />
+          <span className="text-[10px] uppercase tracking-[0.2em]">
+            {connected ? "awaiting first snapshot" : "reconnecting"}
+          </span>
+        </div>
+        <div className="grid w-full max-w-sm grid-cols-3 gap-px bg-border">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="bg-bg-elev/60 animate-pulse rounded-md h-16" />
+          ))}
+        </div>
+        <div className="bg-bg-elev/60 animate-pulse rounded-md h-40 w-full max-w-sm" />
+        <p className="text-fg-dim text-xs italic">
+          {connected
+            ? "Streaming dashboard state from the supervisor."
+            : "Lost connection to the supervisor. Retrying automatically."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function EmptyDashboard(): JSX.Element {
+  return (
+    <div className="grid h-full place-items-center p-8">
+      <div className="flex flex-col items-center gap-3 max-w-md text-center">
+        <span className="text-[10px] uppercase tracking-[0.2em] text-fg-dim">No sessions</span>
+        <p className="text-fg-muted text-sm">claude-watch is online and idle.</p>
+        <p className="text-fg-dim text-xs italic">
+          No Claude Code sessions detected yet. Start one to populate this dashboard.
+        </p>
+      </div>
     </div>
   );
 }

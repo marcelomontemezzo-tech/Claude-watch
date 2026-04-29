@@ -163,7 +163,34 @@ function readManifest(): InstalledPluginsManifest | null {
   }
 }
 
+interface PluginRootsCache {
+  ts: number;
+  manifestMtime: number;
+  roots: Array<{ name: string; root: string }>;
+}
+
+let pluginRootsCache: PluginRootsCache | null = null;
+const PLUGIN_TTL_MS = 5_000;
+
+function manifestMtime(): number {
+  try {
+    return fs.statSync(PLUGINS_MANIFEST).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
 function discoverPluginRoots(): Array<{ name: string; root: string }> {
+  const now = Date.now();
+  const mtime = manifestMtime();
+  if (
+    pluginRootsCache &&
+    now - pluginRootsCache.ts < PLUGIN_TTL_MS &&
+    pluginRootsCache.manifestMtime === mtime
+  ) {
+    return pluginRootsCache.roots;
+  }
+
   const found: Array<{ name: string; root: string }> = [];
   const seen = new Set<string>();
 
@@ -207,10 +234,45 @@ function discoverPluginRoots(): Array<{ name: string; root: string }> {
     }
   }
 
+  pluginRootsCache = { ts: now, manifestMtime: mtime, roots: found };
   return found;
 }
 
+interface ScanCacheEntry {
+  signature: string;
+  list: AgentDefinition[];
+}
+const scanCache = new Map<string, ScanCacheEntry>();
+
+function scanSignature(projectCwd: string | undefined): string {
+  const parts: string[] = [];
+  const dirs = [
+    path.join(CLAUDE_DIR, "agents"),
+    path.join(CLAUDE_DIR, "skills"),
+  ];
+  if (projectCwd) {
+    dirs.push(path.join(projectCwd, ".claude", "agents"));
+    dirs.push(path.join(projectCwd, ".claude", "skills"));
+  }
+  for (const d of dirs) {
+    parts.push(`${d}:${safeStat(d)?.mtimeMs ?? 0}`);
+  }
+  parts.push(`mf:${manifestMtime()}`);
+  return parts.join("|");
+}
+
 export function scanAgents(projectCwd: string | undefined): AgentDefinition[] {
+  const cacheKey = projectCwd ?? "__no_cwd__";
+  const sig = scanSignature(projectCwd);
+  const cached = scanCache.get(cacheKey);
+  if (cached && cached.signature === sig) return cached.list;
+
+  const list = scanAgentsUncached(projectCwd);
+  scanCache.set(cacheKey, { signature: sig, list });
+  return list;
+}
+
+function scanAgentsUncached(projectCwd: string | undefined): AgentDefinition[] {
   const all: AgentDefinition[] = [];
 
   // Global (~/.claude)
