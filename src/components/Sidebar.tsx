@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDashboard } from "../hooks/useDashboard.ts";
 import { cn, formatCost, formatTokens, relativeTime } from "../lib/utils.ts";
+import { BudgetBar } from "./BudgetBar.tsx";
+import { TagChips } from "./TagChips.tsx";
 
 type LaunchStatus = "launched" | "cooldown" | "error";
 
@@ -10,6 +12,9 @@ export function Sidebar(): JSX.Element {
   const select = useDashboard((s) => s.selectProject);
   const search = useDashboard((s) => s.search);
   const setSearch = useDashboard((s) => s.setSearch);
+  const tagFilter = useDashboard((s) => s.tagFilter);
+  const setTagFilter = useDashboard((s) => s.setTagFilter);
+  const openBudgetEditor = useDashboard((s) => s.openBudgetEditor);
   const inputRef = useRef<HTMLInputElement>(null);
   const [launchState, setLaunchState] = useState<{ key: string; status: LaunchStatus } | null>(null);
 
@@ -45,14 +50,20 @@ export function Sidebar(): JSX.Element {
   const projects = useMemo(() => {
     if (!snapshot) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return snapshot.projects;
-    return snapshot.projects.filter(
-      (p) =>
-        p.displayName.toLowerCase().includes(q) ||
-        p.projectKey.toLowerCase().includes(q) ||
-        p.cwd.toLowerCase().includes(q),
-    );
-  }, [snapshot, search]);
+    let list = snapshot.projects;
+    if (tagFilter) {
+      list = list.filter((p) => (p.tags ?? []).includes(tagFilter));
+    }
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.displayName.toLowerCase().includes(q) ||
+          p.projectKey.toLowerCase().includes(q) ||
+          p.cwd.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [snapshot, search, tagFilter]);
 
   if (!snapshot) {
     return (
@@ -76,6 +87,18 @@ export function Sidebar(): JSX.Element {
         <span className="text-[10px] uppercase tracking-[0.2em] text-fg-dim">Projects</span>
         <span className="text-[10px] text-fg-dim">{projects.length}/{snapshot.projects.length}</span>
       </div>
+      {tagFilter && (
+        <div className="flex items-center gap-2 -mt-1">
+          <span className="text-[9px] uppercase tracking-[0.16em] text-fg-dim">tag</span>
+          <button
+            onClick={() => setTagFilter(null)}
+            className="flex items-center gap-1 text-[9px] uppercase tracking-[0.16em] px-1.5 py-0.5 rounded-sm border border-accent/60 bg-accent/10 text-accent"
+          >
+            {tagFilter}
+            <span className="ml-1 opacity-70">×</span>
+          </button>
+        </div>
+      )}
       <div className="relative">
         <input
           ref={inputRef}
@@ -128,6 +151,8 @@ export function Sidebar(): JSX.Element {
                     <span>{p.lastActivityAt ? relativeTime(p.lastActivityAt) : "—"}</span>
                   </div>
                 </button>
+                <BudgetBar project={p} />
+                <TagChips tags={p.tags} />
                 <div className="mt-1.5 flex items-center justify-between gap-2">
                   <button
                     onClick={(e) => void openTerminal(e, p.projectKey)}
@@ -140,6 +165,16 @@ export function Sidebar(): JSX.Element {
                   >
                     <span>▸_</span>
                     <span>open terminal</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openBudgetEditor(p.projectKey);
+                    }}
+                    title="Project governance: budget, tags, audit"
+                    className="text-[9px] uppercase tracking-[0.16em] px-1.5 py-0.5 rounded-sm border border-border bg-bg-elev/60 text-fg-muted hover:border-fg-muted hover:text-fg transition-colors"
+                  >
+                    govern
                   </button>
                   {launchState?.key === p.projectKey && (
                     <span

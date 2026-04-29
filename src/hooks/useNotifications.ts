@@ -7,15 +7,25 @@ interface FiredState {
   fiveHourThreshold: number; // last fired bucket (50, 70, 85, 95)
   weeklyThreshold: number;
   errorIds: string[];
+  budgetState: Record<string, "near" | "over">;
   date: string; // YYYY-MM-DD reset daily
 }
 
 function loadFired(): FiredState {
   try {
     const raw = localStorage.getItem(FIRED_KEY);
-    if (raw) return JSON.parse(raw) as FiredState;
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<FiredState>;
+      return {
+        fiveHourThreshold: parsed.fiveHourThreshold ?? 0,
+        weeklyThreshold: parsed.weeklyThreshold ?? 0,
+        errorIds: parsed.errorIds ?? [],
+        budgetState: parsed.budgetState ?? {},
+        date: parsed.date ?? today(),
+      };
+    }
   } catch {}
-  return { fiveHourThreshold: 0, weeklyThreshold: 0, errorIds: [], date: today() };
+  return { fiveHourThreshold: 0, weeklyThreshold: 0, errorIds: [], budgetState: {}, date: today() };
 }
 
 function today(): string {
@@ -39,6 +49,7 @@ function notify(title: string, body: string, tag: string): void {
 
 export function useNotifications(): void {
   const enabled = useDashboard((s) => s.notificationsEnabled);
+  const budgetEnabled = useDashboard((s) => s.notifyOnBudgetOver);
   const snapshot = useDashboard((s) => s.snapshot);
   const firedRef = useRef<FiredState>(loadFired());
 
@@ -72,6 +83,21 @@ export function useNotifications(): void {
       if (weekly >= t && fired.weeklyThreshold < t) {
         notify("Weekly usage", `Now at ${weekly.toFixed(0)}% of weekly limit`, `weekly-${t}`);
         fired.weeklyThreshold = t;
+      }
+    }
+
+    // Budget thresholds
+    if (budgetEnabled) {
+      for (const proj of snapshot.projects) {
+        const state = proj.budgetState;
+        if (state !== "near" && state !== "over") continue;
+        if (fired.budgetState[proj.projectKey] === state) continue;
+        fired.budgetState[proj.projectKey] = state;
+        notify(
+          state === "over" ? "Budget over" : "Budget near limit",
+          `${proj.displayName}: ${state}`,
+          `budget-${proj.projectKey}-${state}`,
+        );
       }
     }
 

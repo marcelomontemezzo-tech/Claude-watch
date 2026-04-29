@@ -79,6 +79,33 @@ export interface ProjectSummary {
   totalCost: number;
   lastActivityAt: number;
   isLive: boolean;
+  monthCost?: number;
+  budget?: ProjectBudget;
+  budgetState?: BudgetState;
+  tags?: string[];
+}
+
+export interface ProjectBudget {
+  monthly: number;
+  alertThreshold: number;
+  rolloverDay: number;
+}
+
+export type BudgetState = "under" | "near" | "over";
+
+export interface BudgetMap {
+  [projectKey: string]: ProjectBudget;
+}
+
+export interface TagMap {
+  [projectKey: string]: string[];
+}
+
+export interface AuditFilter {
+  projectKey?: string;
+  fromMs?: number;
+  toMs?: number;
+  kinds?: EventKind[];
 }
 
 export type AgentKind = "agent" | "skill";

@@ -12,6 +12,9 @@ interface DashboardState {
   scrub: { enabled: boolean; atTime: number | null; speed: number; playing: boolean };
   notificationsEnabled: boolean;
   search: string;
+  tagFilter: string | null;
+  budgetEditorProjectKey: string | null;
+  notifyOnBudgetOver: boolean;
   setSnapshot: (snap: DashboardSnapshot) => void;
   setConnected: (connected: boolean) => void;
   selectProject: (key: string | null) => void;
@@ -21,6 +24,9 @@ interface DashboardState {
   setScrub: (patch: Partial<DashboardState["scrub"]>) => void;
   setNotifications: (v: boolean) => void;
   setSearch: (s: string) => void;
+  setTagFilter: (tag: string | null) => void;
+  openBudgetEditor: (key: string | null) => void;
+  setNotifyOnBudgetOver: (v: boolean) => void;
 }
 
 export const useDashboard = create<DashboardState>()(
@@ -35,6 +41,9 @@ export const useDashboard = create<DashboardState>()(
       scrub: { enabled: false, atTime: null, speed: 1, playing: false },
       notificationsEnabled: false,
       search: "",
+      tagFilter: null,
+      budgetEditorProjectKey: null,
+      notifyOnBudgetOver: false,
       setSnapshot: (snap) =>
         set((s) => ({
           snapshot: snap,
@@ -48,6 +57,9 @@ export const useDashboard = create<DashboardState>()(
       setScrub: (patch) => set((s) => ({ scrub: { ...s.scrub, ...patch } })),
       setNotifications: (v) => set({ notificationsEnabled: v }),
       setSearch: (s) => set({ search: s }),
+      setTagFilter: (tag) => set({ tagFilter: tag }),
+      openBudgetEditor: (key) => set({ budgetEditorProjectKey: key }),
+      setNotifyOnBudgetOver: (v) => set({ notifyOnBudgetOver: v }),
     }),
     {
       name: "claude-watch-state",
@@ -56,6 +68,8 @@ export const useDashboard = create<DashboardState>()(
         pipelineFilter: s.pipelineFilter,
         centerTab: s.centerTab,
         notificationsEnabled: s.notificationsEnabled,
+        tagFilter: s.tagFilter,
+        notifyOnBudgetOver: s.notifyOnBudgetOver,
       }),
     },
   ),

@@ -25,7 +25,8 @@ import { parseJsonlFile } from "./jsonl-parser.ts";
 import { scanAgents } from "./agents.ts";
 import { buildChoreography } from "./choreography.ts";
 import { buildMemoryBank } from "./memory.ts";
-import type { Choreography, MemoryBank } from "@shared/types.ts";
+import { readBudgets, readTags, rolloverWindowStart } from "./governance.ts";
+import type { BudgetState, Choreography, MemoryBank, ProjectBudget } from "@shared/types.ts";
 
 interface SessionRecord {
   sessionId: string;
@@ -155,6 +156,28 @@ export class WatcherStore extends EventEmitter {
     }, delay);
   }
 
+  collectEvents(opts: {
+    projectKey?: string;
+    fromMs?: number;
+    toMs?: number;
+    kinds?: TimelineEvent["kind"][];
+  }): TimelineEvent[] {
+    const out: TimelineEvent[] = [];
+    const kindsFilter = opts.kinds && opts.kinds.length > 0 ? new Set(opts.kinds) : null;
+    for (const record of this.sessions.values()) {
+      if (!record.parsed) continue;
+      if (opts.projectKey && record.projectKey !== opts.projectKey) continue;
+      for (const ev of record.parsed.events) {
+        if (opts.fromMs != null && ev.timestamp < opts.fromMs) continue;
+        if (opts.toMs != null && ev.timestamp > opts.toMs) continue;
+        if (kindsFilter && !kindsFilter.has(ev.kind)) continue;
+        out.push(ev);
+      }
+    }
+    out.sort((a, b) => a.timestamp - b.timestamp);
+    return out;
+  }
+
   buildSnapshot(): DashboardSnapshot {
     const sessions = Array.from(this.sessions.values()).filter((s) => s.parsed);
     const now = Date.now();
@@ -166,6 +189,9 @@ export class WatcherStore extends EventEmitter {
       byProject.set(s.projectKey, list);
     }
 
+    const budgets = readBudgets();
+    const tagMap = readTags();
+
     const projects: ProjectSummary[] = [];
     for (const [projectKey, list] of byProject) {
       list.sort((a, b) => (b.parsed!.snapshot.lastActivityAt) - (a.parsed!.snapshot.lastActivityAt));
@@ -173,16 +199,31 @@ export class WatcherStore extends EventEmitter {
       let cost = 0;
       let activeSessionId: string | null = null;
       let lastActivityAt = 0;
+      const budget: ProjectBudget | undefined = budgets[projectKey];
+      const monthStart = budget
+        ? rolloverWindowStart(budget.rolloverDay, new Date(now))
+        : rolloverWindowStart(1, new Date(now));
+      let monthCost = 0;
       for (const r of list) {
         const snap = r.parsed!.snapshot;
         tokens += snap.tokens.input + snap.tokens.output + snap.tokens.cacheCreate + snap.tokens.cacheRead;
         cost += snap.cost.total;
+        if (snap.startedAt >= monthStart) {
+          monthCost += snap.cost.total;
+        }
         if (snap.lastActivityAt > lastActivityAt) {
           lastActivityAt = snap.lastActivityAt;
           if (now - snap.lastActivityAt < RECENT_WINDOW_MS) activeSessionId = snap.sessionId;
         }
       }
       const cwd = list[0]!.parsed!.snapshot.cwd;
+      let budgetState: BudgetState | undefined;
+      if (budget && budget.monthly > 0) {
+        const ratio = monthCost / budget.monthly;
+        if (ratio >= 1) budgetState = "over";
+        else if (ratio >= budget.alertThreshold) budgetState = "near";
+        else budgetState = "under";
+      }
       projects.push({
         projectKey,
         cwd,
@@ -193,6 +234,10 @@ export class WatcherStore extends EventEmitter {
         totalCost: cost,
         lastActivityAt,
         isLive: !!activeSessionId,
+        monthCost,
+        budget,
+        budgetState,
+        tags: tagMap[projectKey],
       });
     }
     projects.sort((a, b) => Number(b.isLive) - Number(a.isLive) || b.lastActivityAt - a.lastActivityAt);
