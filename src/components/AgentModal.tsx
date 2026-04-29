@@ -106,35 +106,40 @@ export function AgentModal(): JSX.Element | null {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-bg/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-bg/80 backdrop-blur-sm p-4"
       onClick={(e) => e.target === e.currentTarget && close(null)}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Agent: ${agentName}`}
     >
-      <div className="bg-bg-elev border border-border-strong rounded-lg shadow-2xl w-[min(960px,92vw)] h-[min(720px,88vh)] flex flex-col">
-        <header className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border">
-          <div className="flex items-center gap-3 min-w-0">
-            <span
-              className={cn(
-                "text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-sm shrink-0",
-                detail?.kind === "skill" ? "bg-info/15 text-info" : "bg-accent/15 text-accent",
-              )}
-            >
-              {detail?.kind ?? "agent"}
-            </span>
-            <h2 className="font-semibold text-base truncate">{agentName}</h2>
+      <div className="bg-bg-elev border border-border-strong rounded-md shadow-[0_24px_64px_-12px_rgba(0,0,0,0.6)] w-[min(960px,92vw)] h-[min(720px,88vh)] flex flex-col overflow-hidden">
+        <header className="flex items-start justify-between gap-4 px-5 py-3.5 border-b border-border">
+          <div className="flex flex-col min-w-0 gap-1">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span
+                className={cn(
+                  "text-[9px] uppercase tracking-[0.18em] px-1.5 py-0.5 rounded-sm shrink-0",
+                  detail?.kind === "skill" ? "bg-info/15 text-info" : "bg-accent/15 text-accent",
+                )}
+              >
+                {detail?.kind ?? "agent"}
+              </span>
+              <h2 className="font-semibold text-base truncate text-fg leading-tight">{agentName}</h2>
+            </div>
             {detail && (
               <span className="text-[10px] uppercase tracking-[0.16em] text-fg-dim">
                 {detail.source}
-                {detail.pluginName ? ` · ${detail.pluginName}` : ""}
+                {detail.pluginName ? <span className="text-fg-dim/60"> · {detail.pluginName}</span> : null}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {savedAt && (
               <span className="text-[10px] text-success tabular">saved {relativeTime(savedAt)}</span>
             )}
             <button
               onClick={openInEditor}
-              className="text-[10px] uppercase tracking-[0.16em] px-2 py-1 rounded-sm border border-border bg-bg-card text-fg-muted hover:bg-bg-hover"
+              className="text-[10px] uppercase tracking-[0.16em] px-2 py-1 rounded-sm border border-border bg-bg-card text-fg-muted hover:bg-bg-hover hover:text-fg transition-colors"
               title={detail?.filePath}
             >
               open in editor
@@ -142,28 +147,35 @@ export function AgentModal(): JSX.Element | null {
             {obsidianUri() && (
               <a
                 href={obsidianUri()!}
-                className="text-[10px] uppercase tracking-[0.16em] px-2 py-1 rounded-sm border border-info/40 bg-info/10 text-info hover:bg-info/20"
+                className="text-[10px] uppercase tracking-[0.16em] px-2 py-1 rounded-sm border border-info/40 bg-info/10 text-info hover:bg-info/20 transition-colors"
               >
                 obsidian
               </a>
             )}
             <button
               onClick={() => close(null)}
-              className="text-fg-dim hover:text-fg text-lg leading-none px-1"
-              aria-label="close"
+              aria-label="Close dialog"
+              className={cn(
+                "size-7 grid place-items-center rounded-sm border border-transparent",
+                "text-fg-dim hover:text-fg hover:bg-bg-hover hover:border-border",
+                "transition-colors",
+              )}
             >
-              ×
+              <span aria-hidden className="relative block size-3">
+                <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 rotate-45 bg-current" />
+                <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 -rotate-45 bg-current" />
+              </span>
             </button>
           </div>
         </header>
 
-        <nav className="flex border-b border-border bg-bg-elev/40">
+        <nav className="flex border-b border-border bg-bg-elev/40 px-2">
           {(["overview", "personality", "last-run", "history"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "px-4 py-2 text-xs font-medium transition-colors -mb-px border-b-2 flex items-center gap-2",
+                "px-3 py-2.5 text-[12px] font-medium transition-colors -mb-px border-b-2 flex items-center gap-2",
                 tab === t
                   ? "border-accent text-fg"
                   : "border-transparent text-fg-dim hover:text-fg-muted",
@@ -202,8 +214,10 @@ export function AgentModal(): JSX.Element | null {
         </div>
 
         <footer className="flex items-center justify-between gap-3 px-5 py-3 border-t border-border bg-bg-elev/40">
-          <span className="text-[10px] text-fg-dim font-mono break-all">{detail?.filePath}</span>
-          <div className="flex items-center gap-2">
+          <span className="text-[10px] text-fg-dim font-mono break-all truncate" title={detail?.filePath}>
+            {detail?.filePath}
+          </span>
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => {
                 if (detail) {
@@ -212,14 +226,14 @@ export function AgentModal(): JSX.Element | null {
                 }
               }}
               disabled={!dirtyContent && !dirtyModel}
-              className="text-[10px] uppercase tracking-[0.16em] px-3 py-1.5 rounded-sm border border-border bg-bg-card text-fg-muted hover:bg-bg-hover disabled:opacity-30 disabled:cursor-not-allowed"
+              className="text-[10px] uppercase tracking-[0.16em] px-3 py-1.5 rounded-sm border border-border bg-bg-card text-fg-muted hover:bg-bg-hover hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               revert
             </button>
             <button
               onClick={save}
               disabled={saving || (!dirtyContent && !dirtyModel)}
-              className="text-[10px] uppercase tracking-[0.16em] px-3 py-1.5 rounded-sm border border-accent bg-accent/15 text-accent hover:bg-accent/25 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="text-[10px] uppercase tracking-[0.16em] px-3 py-1.5 rounded-sm border border-accent bg-accent/15 text-accent hover:bg-accent/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? "saving…" : dirtyContent || dirtyModel ? "save changes" : "saved"}
             </button>
@@ -240,9 +254,9 @@ function OverviewTab({
   setEditedModel: (v: string) => void;
 }): JSX.Element {
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <Field label="description">
-        <p className="text-sm text-fg leading-relaxed">{detail.frontmatter.description ?? "—"}</p>
+        <p className="text-[13px] text-fg leading-relaxed">{detail.frontmatter.description ?? "—"}</p>
       </Field>
 
       <Field label="thinking model">
@@ -250,23 +264,25 @@ function OverviewTab({
       </Field>
 
       <Field label="frontmatter">
-        <table className="w-full text-xs tabular">
-          <tbody>
-            {Object.entries(detail.frontmatter).map(([k, v]) => (
-              <tr key={k} className="border-b border-border last:border-0">
-                <td className="py-1.5 pr-4 text-fg-dim uppercase tracking-[0.14em] text-[9px] w-32">{k}</td>
-                <td className="py-1.5 text-fg-muted break-all">{v}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <dl className="grid grid-cols-[8rem_1fr] gap-x-4 text-[11px] tabular border border-border rounded-md overflow-hidden">
+          {Object.entries(detail.frontmatter).map(([k, v], i, arr) => (
+            <div key={k} className={cn("contents", i < arr.length - 1 && "[&>*]:border-b [&>*]:border-border/60")}>
+              <dt className="py-2 pl-3 pr-2 text-fg-dim uppercase tracking-[0.14em] text-[9px] bg-bg/40">
+                {k}
+              </dt>
+              <dd className="py-2 pr-3 text-fg-muted break-all">{v}</dd>
+            </div>
+          ))}
+        </dl>
       </Field>
 
       <Field label="filesystem">
-        <div className="flex flex-col gap-1 text-[11px] text-fg-muted font-mono">
-          <span>{detail.filePath}</span>
+        <div className="flex flex-col gap-1 text-[11px] text-fg-muted font-mono p-3 bg-bg/30 border border-border rounded-md">
+          <span className="break-all">{detail.filePath}</span>
           {detail.isInsideObsidian && (
-            <span className="text-info">obsidian vault: {detail.obsidianVault} → {detail.obsidianRelPath}</span>
+            <span className="text-info break-all">
+              obsidian vault: {detail.obsidianVault} → {detail.obsidianRelPath}
+            </span>
           )}
         </div>
       </Field>
@@ -355,15 +371,15 @@ function LastRunTab({ detail }: { detail: AgentDetail }): JSX.Element {
   }
   const inv = detail.lastInvocation;
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[11px] tabular">
+    <div className="flex flex-col gap-5">
+      <dl className="grid grid-cols-[6.5rem_1fr_6.5rem_1fr] gap-x-5 gap-y-2.5 text-[11px] tabular border border-border rounded-md p-4 bg-bg/30">
         <Pair label="status" value={inv.status} accent={inv.status === "error" ? "danger" : inv.status === "running" ? "warning" : "success"} />
         <Pair label="model" value={inv.model} />
-        <Pair label="started" value={`${relativeTime(inv.startedAt)} (${new Date(inv.startedAt).toLocaleString()})`} />
+        <Pair label="started" value={`${relativeTime(inv.startedAt)} · ${new Date(inv.startedAt).toLocaleString()}`} />
         <Pair label="duration" value={formatDuration(inv.durationMs)} />
-        <Pair label="session" value={inv.sessionId.slice(0, 8) + "…"} />
-        <Pair label="tool_use_id" value={inv.toolUseId.slice(0, 12) + "…"} />
-      </div>
+        <Pair label="session" value={inv.sessionId.slice(0, 8) + "…"} mono />
+        <Pair label="tool_use_id" value={inv.toolUseId.slice(0, 12) + "…"} mono />
+      </dl>
 
       <Field label="prompt sent to agent">
         <pre className="bg-bg p-3 border border-border rounded-md text-[11px] font-mono leading-relaxed text-fg-muted whitespace-pre-wrap break-words max-h-72 overflow-y-auto">
@@ -506,24 +522,30 @@ function Pair({
   label,
   value,
   accent,
+  mono,
 }: {
   label: string;
   value: string;
   accent?: "warning" | "success" | "danger";
+  mono?: boolean;
 }): JSX.Element {
   return (
-    <div className="flex items-center justify-between gap-2 min-w-0">
-      <span className="text-fg-dim uppercase tracking-[0.14em] text-[9px]">{label}</span>
-      <span
+    <>
+      <dt className="text-fg-dim uppercase tracking-[0.14em] text-[9px] self-center">
+        {label}
+      </dt>
+      <dd
         className={cn(
-          "text-fg truncate",
+          "text-fg truncate min-w-0 self-center",
+          mono && "font-mono text-[10.5px]",
           accent === "warning" && "text-warning",
           accent === "success" && "text-success",
           accent === "danger" && "text-danger",
         )}
+        title={value}
       >
         {value}
-      </span>
-    </div>
+      </dd>
+    </>
   );
 }

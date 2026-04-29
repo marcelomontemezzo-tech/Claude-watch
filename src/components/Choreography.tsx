@@ -280,25 +280,27 @@ export function Choreography(): JSX.Element {
   return (
     <div className="flex h-full flex-col">
       <LiveBanner running={runningList} lastActivity={lastActivity} statusByAgent={statusByAgent} />
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2 bg-bg-elev/40 flex-wrap">
-        <span className="text-[10px] uppercase tracking-[0.2em] text-fg-dim mr-2">Pipeline</span>
-        <PipelineChip label="all" id={null} active={pipeline} onSelect={setPipeline} />
-        {choreo.pipelines.map((p) => (
-          <PipelineChip
-            key={p.id}
-            id={p.id}
-            label={p.label}
-            description={p.description}
-            active={pipeline}
-            onSelect={setPipeline}
-          />
-        ))}
-        <div className="ml-auto flex items-center gap-3 text-[9px] uppercase tracking-[0.16em] text-fg-dim">
+      <div className="flex items-center gap-5 border-b border-border px-4 h-9 bg-bg-elev/30 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] uppercase tracking-[0.22em] text-fg-dim mr-1">Pipeline</span>
+          <PipelineChip label="all" id={null} active={pipeline} onSelect={setPipeline} />
+          {choreo.pipelines.map((p) => (
+            <PipelineChip
+              key={p.id}
+              id={p.id}
+              label={p.label}
+              description={p.description}
+              active={pipeline}
+              onSelect={setPipeline}
+            />
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-3 text-[9px] uppercase tracking-[0.18em] text-fg-dim border-l border-border pl-5">
           <Legend swatch="var(--color-accent)" label="dispatch" />
           <Legend swatch="var(--color-info)" label="parallel" dashed />
           <Legend swatch="var(--color-fg-muted)" label="sequence" />
-          <Legend swatch="var(--color-success)" label="gate-pass" />
-          <Legend swatch="var(--color-warning)" label="loopback" dashed />
+          <Legend swatch="var(--color-success)" label="pass" />
+          <Legend swatch="var(--color-warning)" label="loop" dashed />
           <Legend swatch="var(--color-danger)" label="escalate" dashed />
         </div>
       </div>
@@ -406,10 +408,10 @@ function PipelineChip({
       onClick={() => onSelect(id)}
       title={description}
       className={cn(
-        "text-[10px] uppercase tracking-[0.16em] px-2 py-1 rounded-sm border",
+        "text-[10px] uppercase tracking-[0.18em] px-1.5 py-0.5 rounded-xs border transition-colors",
         isActive
-          ? "border-accent bg-accent/15 text-accent"
-          : "border-border bg-bg-card text-fg-muted hover:bg-bg-hover",
+          ? "border-accent/70 text-accent bg-accent/5"
+          : "border-transparent text-fg-dim hover:text-fg-muted hover:border-border",
       )}
     >
       {label}
@@ -421,10 +423,10 @@ function Legend({ swatch, label, dashed }: { swatch: string; label: string; dash
   return (
     <span className="flex items-center gap-1.5">
       <span
-        className="inline-block w-5 h-px"
+        className="inline-block w-3.5 h-px"
         style={{
           background: dashed
-            ? `repeating-linear-gradient(to right, ${swatch} 0 4px, transparent 4px 8px)`
+            ? `repeating-linear-gradient(to right, ${swatch} 0 3px, transparent 3px 6px)`
             : swatch,
         }}
       />
@@ -458,10 +460,10 @@ function ChoreographyNodeView({
   return (
     <div
       className={cn(
-        "rounded-md border px-3 py-2 w-[156px] text-xs shadow-md shadow-black/30 relative transition-all cursor-pointer hover:bg-bg-hover",
+        "rounded-md border px-3 py-2 w-[156px] text-xs shadow-sm shadow-black/40 relative transition-all cursor-pointer hover:bg-bg-hover",
         ROLE_STYLE[node.role],
         STATUS_RING[status],
-        node.fixed && status === "idle" && "ring-1 ring-fg-dim/40",
+        node.fixed && status === "idle" && "ring-1 ring-fg-dim/30",
       )}
       title={`${node.description ?? ""} · click to open`}
     >
@@ -469,15 +471,15 @@ function ChoreographyNodeView({
       <Handle type="target" id="top" position={Position.Top} className="!bg-border opacity-0" />
       <Handle type="source" id="top" position={Position.Top} className="!bg-border opacity-0" />
       <div className="flex items-center justify-between gap-1.5">
-        <span className="font-medium truncate">{node.name}</span>
+        <span className="font-medium truncate tracking-tight">{node.name}</span>
         <span className={cn("size-1.5 rounded-full shrink-0", dot.color)} />
       </div>
-      <div className="mt-0.5 flex items-center justify-between text-[8px] uppercase tracking-[0.16em] opacity-70">
+      <div className="mt-1 flex items-center justify-between text-[8px] uppercase tracking-[0.18em] opacity-65">
         <span>{PHASE_LABEL[node.phase]}</span>
         {status !== "idle" ? (
           <span
             className={cn(
-              "font-semibold",
+              "font-semibold tabular",
               status === "running" && "text-warning",
               status === "done" && "text-success",
               status === "error" && "text-danger",
@@ -493,13 +495,13 @@ function ChoreographyNodeView({
         )}
       </div>
       {status === "running" && runtime?.run && (
-        <div className="mt-0.5 text-[8px] text-warning tabular">
-          ▶ {formatDuration(Date.now() - runtime.run.startedAt)}
+        <div className="mt-0.5 text-[9px] text-warning tabular">
+          {formatDuration(Date.now() - runtime.run.startedAt)}
         </div>
       )}
       {node.parallelWith && node.parallelWith.length > 0 && status === "idle" && (
-        <div className="mt-0.5 text-[8px] text-info/80">
-          ∥ {node.parallelWith.map((p) => p.replace(/^agent-/, "")).join(", ")}
+        <div className="mt-0.5 text-[8px] text-info/70 truncate">
+          {node.parallelWith.map((p) => p.replace(/^agent-/, "")).join(" · ")}
         </div>
       )}
       <Handle type="source" position={Position.Right} className="!bg-border opacity-0" />
@@ -519,41 +521,47 @@ function LiveBanner({
   const totals = { running: 0, done: 0, error: 0, idle: 0 };
   for (const v of statusByAgent.values()) totals[v.status] += 1;
 
+  const live = running.length > 0;
   return (
     <div
       className={cn(
-        "border-b border-border px-4 py-2 flex items-center gap-4 text-xs",
-        running.length > 0 ? "bg-warning/10" : "bg-bg-elev/40",
+        "border-b border-border px-4 h-9 flex items-center gap-5 text-xs",
+        live ? "bg-warning/[0.06]" : "bg-bg-elev/40",
       )}
     >
       <div className="flex items-center gap-2">
         <span
           className={cn(
-            "size-2 rounded-full",
-            running.length > 0 ? "bg-warning pulse-soft" : "bg-fg-dim/40",
+            "size-1.5 rounded-full",
+            live ? "bg-warning pulse-soft" : "bg-fg-dim/40",
           )}
         />
-        <span className="text-[10px] uppercase tracking-[0.2em] text-fg-muted">
-          {running.length > 0 ? "live" : "idle"}
+        <span
+          className={cn(
+            "text-[9px] uppercase tracking-[0.22em]",
+            live ? "text-warning" : "text-fg-dim",
+          )}
+        >
+          {live ? "live" : "idle"}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-[10px] tabular text-fg-muted">
+      <div className="flex items-center gap-4 text-[10px] tabular text-fg-muted border-l border-border pl-5">
         <Tally label="running" value={totals.running} accent="warning" />
         <Tally label="done" value={totals.done} accent="success" />
         {totals.error > 0 && <Tally label="error" value={totals.error} accent="danger" />}
       </div>
-      <div className="flex-1 min-w-0 overflow-hidden">
-        {running.length === 0 ? (
-          <span className="text-fg-dim text-[11px]">no subagents running</span>
+      <div className="flex-1 min-w-0 overflow-hidden border-l border-border pl-5">
+        {!live ? (
+          <span className="text-fg-dim text-[10px] uppercase tracking-[0.18em]">no subagents running</span>
         ) : (
-          <ul className="flex items-center gap-2 overflow-x-auto">
+          <ul className="flex items-center gap-1.5 overflow-x-auto">
             {running.map(({ agentId, run }) => (
               <li
                 key={run.id}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-warning/15 text-warning text-[10px] whitespace-nowrap"
+                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-xs border border-warning/30 bg-warning/[0.06] text-warning text-[10px] whitespace-nowrap"
               >
                 <span className="size-1 rounded-full bg-warning pulse-soft" />
-                <span className="font-medium">{agentId.replace(/^agent-/, "")}</span>
+                <span className="font-medium tracking-tight">{agentId.replace(/^agent-/, "")}</span>
                 <span className="opacity-70 tabular">
                   {formatDuration(Date.now() - run.startedAt)}
                 </span>
@@ -563,7 +571,7 @@ function LiveBanner({
         )}
       </div>
       {lastActivity > 0 && (
-        <span className="text-[10px] text-fg-dim tabular shrink-0">
+        <span className="text-[10px] text-fg-dim tabular shrink-0 border-l border-border pl-5">
           last {relativeTime(lastActivity)}
         </span>
       )}
@@ -581,17 +589,17 @@ function Tally({
   accent: "warning" | "success" | "danger";
 }): JSX.Element {
   return (
-    <span className="flex items-center gap-1">
+    <span className="flex items-baseline gap-1.5">
       <span
         className={cn(
-          "size-1.5 rounded-full",
+          "size-1 rounded-full self-center",
           accent === "warning" && "bg-warning",
           accent === "success" && "bg-success",
           accent === "danger" && "bg-danger",
         )}
       />
-      <span className="text-fg-muted">{value}</span>
-      <span className="text-fg-dim uppercase tracking-[0.14em] text-[9px]">{label}</span>
+      <span className="text-fg text-[11px] tabular font-medium">{value}</span>
+      <span className="text-fg-dim uppercase tracking-[0.18em] text-[9px]">{label}</span>
     </span>
   );
 }

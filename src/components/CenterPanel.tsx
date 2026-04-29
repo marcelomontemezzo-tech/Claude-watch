@@ -33,39 +33,46 @@ export function CenterPanel(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <nav className="flex items-center border-b border-border bg-bg-elev/40 px-2">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "relative px-4 py-2.5 text-xs font-medium transition-colors",
-              "border-b-2 -mb-px",
-              tab === t.id
-                ? "border-accent text-fg"
-                : "border-transparent text-fg-dim hover:text-fg-muted",
-            )}
-            title={`${t.hint} · press ${t.key}`}
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-[8px] text-fg-dim/50 tabular">{t.key}</span>
-              {t.label}
+      <nav
+        role="tablist"
+        className="flex items-center border-b border-border bg-bg-elev/40 px-5 gap-7"
+      >
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "group relative flex items-center gap-2 py-3 text-[12px] tracking-tight transition-colors",
+                active ? "text-fg" : "text-fg-dim hover:text-fg-muted",
+              )}
+              title={`${t.hint} · press ${t.key}`}
+            >
+              <span className="text-[9px] tabular text-fg-dim/60">{t.key}</span>
+              <span className="font-medium">{t.label}</span>
               {counts[t.id] != null && counts[t.id]! > 0 && (
                 <span
                   className={cn(
-                    "text-[9px] tabular px-1.5 py-px rounded-sm",
-                    tab === t.id ? "bg-accent/20 text-accent" : "bg-bg-card text-fg-dim",
+                    "text-[10px] tabular tracking-tight transition-colors",
+                    active ? "text-fg-muted" : "text-fg-dim/70",
                   )}
                 >
                   {counts[t.id]}
                 </span>
               )}
-            </span>
-            <span className="block text-[9px] uppercase tracking-[0.18em] text-fg-dim/60 mt-0.5 leading-none">
-              {t.hint}
-            </span>
-          </button>
-        ))}
+              <span
+                aria-hidden
+                className={cn(
+                  "pointer-events-none absolute left-0 right-0 -bottom-px h-px transition-colors",
+                  active ? "bg-fg" : "bg-transparent",
+                )}
+              />
+            </button>
+          );
+        })}
       </nav>
       {tab !== "memory" && <Scrubber />}
       <div className="flex-1 overflow-hidden">

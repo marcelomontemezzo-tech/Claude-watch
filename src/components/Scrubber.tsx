@@ -50,37 +50,49 @@ export function Scrubber(): JSX.Element | null {
   const fromNow = Date.now() - at;
 
   return (
-    <div className="border-b border-border bg-bg-elev/40 px-4 py-2 flex items-center gap-3 text-xs">
+    <div
+      className={cn(
+        "group/scrubber border-b border-border bg-bg-elev/30 px-4 h-9 flex items-center gap-4 text-xs",
+        scrub.enabled && "bg-bg-elev/50",
+      )}
+    >
       <button
-        onClick={() => setScrub({ enabled: !scrub.enabled, atTime: scrub.enabled ? null : range.max, playing: false })}
+        onClick={() =>
+          setScrub({
+            enabled: !scrub.enabled,
+            atTime: scrub.enabled ? null : range.max,
+            playing: false,
+          })
+        }
         className={cn(
-          "text-[10px] uppercase tracking-[0.16em] px-2 py-1 rounded-sm border",
+          "text-[9px] uppercase tracking-[0.22em] transition-colors",
           scrub.enabled
-            ? "border-warning/60 bg-warning/10 text-warning"
-            : "border-border bg-bg-card text-fg-muted hover:bg-bg-hover",
+            ? "text-warning hover:text-fg"
+            : "text-fg-dim hover:text-fg-muted",
         )}
       >
-        {scrub.enabled ? "live ←" : "→ replay"}
+        {scrub.enabled ? "Live" : "Replay"}
       </button>
 
       {scrub.enabled && (
         <>
+          <span className="h-3 w-px bg-border" aria-hidden />
           <button
             onClick={() => setScrub({ playing: !scrub.playing })}
-            className="text-[10px] px-2 py-1 rounded-sm border border-border bg-bg-card text-fg-muted hover:bg-bg-hover"
+            className="text-[10px] uppercase tracking-[0.18em] text-fg-muted hover:text-fg transition-colors min-w-[42px] text-left"
           >
-            {scrub.playing ? "▌▌ pause" : "▶ play"}
+            {scrub.playing ? "Pause" : "Play"}
           </button>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2.5 opacity-60 group-hover/scrubber:opacity-100 transition-opacity">
             {[1, 2, 4, 10].map((sp) => (
               <button
                 key={sp}
                 onClick={() => setScrub({ speed: sp })}
                 className={cn(
-                  "text-[9px] tabular px-1.5 py-0.5 rounded-sm border",
+                  "text-[10px] tabular tracking-tight transition-colors",
                   scrub.speed === sp
-                    ? "border-accent bg-accent/15 text-accent"
-                    : "border-border bg-bg-card text-fg-muted hover:bg-bg-hover",
+                    ? "text-fg"
+                    : "text-fg-dim hover:text-fg-muted",
                 )}
               >
                 {sp}×
@@ -90,7 +102,8 @@ export function Scrubber(): JSX.Element | null {
         </>
       )}
 
-      <div className="flex-1 relative h-6 bg-bg-card rounded-sm cursor-pointer min-w-0"
+      <div
+        className="flex-1 relative h-5 cursor-pointer min-w-0 group/track"
         onClick={(e) => {
           if (!scrub.enabled) return;
           const rect = e.currentTarget.getBoundingClientRect();
@@ -104,6 +117,9 @@ export function Scrubber(): JSX.Element | null {
           setScrub({ atTime: range.min + ratio * span });
         }}
       >
+        {/* track */}
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-border -translate-y-1/2" />
+
         {/* event markers */}
         {events.slice(-200).map((ev) => {
           const evPct = ((ev.timestamp - range.min) / span) * 100;
@@ -111,34 +127,44 @@ export function Scrubber(): JSX.Element | null {
           return (
             <span
               key={ev.id}
-              className="absolute top-1 bottom-1 w-px bg-fg-dim/40"
+              className="absolute top-1/2 -translate-y-1/2 h-1.5 w-px bg-fg-dim/50"
               style={{ left: `${evPct}%` }}
               title={ev.label}
             />
           );
         })}
+
         {/* progress fill */}
         <div
-          className="absolute top-0 bottom-0 left-0 bg-accent/15 rounded-sm transition-[width]"
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2 h-px left-0 transition-[width]",
+            scrub.enabled ? "bg-warning/70" : "bg-fg-muted/40",
+          )}
           style={{ width: `${pct}%` }}
         />
+
         {/* playhead */}
         <div
           className={cn(
-            "absolute top-0 bottom-0 w-0.5",
-            scrub.enabled ? "bg-warning" : "bg-accent",
+            "absolute top-1/2 -translate-y-1/2 size-2 rounded-full transition-colors",
+            scrub.enabled ? "bg-warning shadow-[0_0_6px_var(--color-warning)]" : "bg-fg-muted",
           )}
-          style={{ left: `${pct}%` }}
+          style={{ left: `calc(${pct}% - 4px)` }}
         />
       </div>
 
-      <div className="flex flex-col items-end leading-tight tabular text-[10px] shrink-0">
-        <span className="text-fg-dim uppercase tracking-[0.16em]">at</span>
-        <span className="text-fg-muted">
+      <div className="flex items-baseline gap-2 tabular text-[10px] shrink-0">
+        <span className="text-fg-dim uppercase tracking-[0.2em] text-[9px]">at</span>
+        <span className="text-fg tracking-tight">
           {scrub.enabled
-            ? `−${formatDuration(fromNow)} (${new Date(at).toLocaleTimeString()})`
+            ? `−${formatDuration(fromNow)}`
             : "now"}
         </span>
+        {scrub.enabled && (
+          <span className="text-fg-dim">
+            {new Date(at).toLocaleTimeString()}
+          </span>
+        )}
       </div>
     </div>
   );
