@@ -9,6 +9,7 @@ import { AgentRoster } from "./components/AgentRoster.tsx";
 import { Header } from "./components/Header.tsx";
 import { AgentModal } from "./components/AgentModal.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
+import { ProjectGovernance } from "./components/ProjectGovernance.tsx";
 
 export default function App(): JSX.Element {
   const snapshot = useDashboard((s) => s.snapshot);
@@ -58,6 +59,7 @@ export default function App(): JSX.Element {
         </ErrorBoundary>
       </main>
       <AgentModal />
+      <ProjectGovernance />
     </div>
   );
 }

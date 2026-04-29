@@ -5,7 +5,20 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { WatcherStore } from "./watcher.ts";
 import { buildAgentDetail, writeAgentDetail } from "./agent-detail.ts";
-import type { DashboardSnapshot, ServerEvent } from "@shared/types.ts";
+import {
+  listAllTags,
+  readBudgets,
+  readTags,
+  writeBudget,
+  writeTags,
+} from "./governance.ts";
+import type {
+  DashboardSnapshot,
+  EventKind,
+  ProjectBudget,
+  ServerEvent,
+  TimelineEvent,
+} from "@shared/types.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.CLAUDE_WATCH_PORT ?? 1789);
@@ -87,6 +100,80 @@ async function main(): Promise<void> {
     } catch (err) {
       res.status(400).json({ error: String((err as Error).message ?? err) });
     }
+  });
+
+  app.get("/api/governance/budgets", (_req, res) => {
+    res.json(readBudgets());
+  });
+
+  app.put("/api/governance/budgets/:projectKey", (req, res) => {
+    const projectKey = req.params.projectKey;
+    const body = req.body as { budget?: ProjectBudget | null };
+    try {
+      const budget = body?.budget;
+      const updated = writeBudget(projectKey, budget ?? null);
+      res.json(updated);
+    } catch (err) {
+      res.status(400).json({ error: String((err as Error).message ?? err) });
+    }
+  });
+
+  app.get("/api/governance/tags", (_req, res) => {
+    res.json({ tagsByProject: readTags(), all: listAllTags() });
+  });
+
+  app.put("/api/governance/tags/:projectKey", (req, res) => {
+    const projectKey = req.params.projectKey;
+    const body = req.body as { tags?: string[] };
+    try {
+      const updated = writeTags(projectKey, Array.isArray(body?.tags) ? body!.tags : []);
+      res.json({ tagsByProject: updated, all: listAllTags() });
+    } catch (err) {
+      res.status(400).json({ error: String((err as Error).message ?? err) });
+    }
+  });
+
+  app.get("/api/audit/export", (req, res) => {
+    const projectKey = (req.query.project as string | undefined) ?? undefined;
+    const fromMs = req.query.from ? Number(req.query.from) : undefined;
+    const toMs = req.query.to ? Number(req.query.to) : undefined;
+    const kindsParam = (req.query.kinds as string | undefined) ?? "";
+    const kinds = kindsParam
+      ? (kindsParam
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean) as EventKind[])
+      : undefined;
+    const format = ((req.query.format as string | undefined) ?? "ndjson").toLowerCase();
+    const events: TimelineEvent[] = store.collectEvents({ projectKey, fromMs, toMs, kinds });
+
+    if (format === "csv") {
+      const header = "timestamp,kind,sessionId,toolName,label,detail";
+      const rows = events.map((e) =>
+        [
+          new Date(e.timestamp).toISOString(),
+          e.kind,
+          e.sessionId,
+          e.toolName ?? "",
+          csvEscape(e.label),
+          csvEscape(e.detail ?? ""),
+        ].join(","),
+      );
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="claude-watch-audit-${Date.now()}.csv"`,
+      );
+      res.send([header, ...rows].join("\n"));
+      return;
+    }
+
+    res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="claude-watch-audit-${Date.now()}.ndjson"`,
+    );
+    res.send(events.map((e) => JSON.stringify(e)).join("\n"));
   });
 
   const launchCooldown = new Map<string, number>();
@@ -209,6 +296,13 @@ main().catch((err) => {
   console.error("[claude-watch] fatal", err);
   process.exit(1);
 });
+
+function csvEscape(value: string): string {
+  if (value == null) return "";
+  const needs = /[",\n\r]/.test(value);
+  const escaped = value.replace(/"/g, '""');
+  return needs ? `"${escaped}"` : escaped;
+}
 
 function snapshotHash(snap: DashboardSnapshot): string {
   const projectsKey = snap.projects
