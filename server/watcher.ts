@@ -47,7 +47,14 @@ export class WatcherStore extends EventEmitter {
 
   async start(): Promise<void> {
     if (!fs.existsSync(PROJECTS_DIR)) {
-      throw new Error(`Claude projects dir not found: ${PROJECTS_DIR}`);
+      console.warn(
+        `[claude-watch] projects dir not found yet: ${PROJECTS_DIR} — will pick up sessions once Claude Code creates it.`,
+      );
+      try {
+        fs.mkdirSync(PROJECTS_DIR, { recursive: true });
+      } catch {
+        // best-effort; watcher will retry via chokidar add events
+      }
     }
     await this.bootstrap();
     this.fsWatcher = chokidar.watch(PROJECTS_DIR, {
@@ -66,9 +73,13 @@ export class WatcherStore extends EventEmitter {
   }
 
   private async bootstrap(): Promise<void> {
-    const projectDirs = safeReadDir(PROJECTS_DIR).filter((d) =>
-      fs.statSync(path.join(PROJECTS_DIR, d)).isDirectory(),
-    );
+    const projectDirs = safeReadDir(PROJECTS_DIR).filter((d) => {
+      try {
+        return fs.statSync(path.join(PROJECTS_DIR, d)).isDirectory();
+      } catch {
+        return false;
+      }
+    });
     const tasks: Promise<void>[] = [];
     for (const projectKey of projectDirs) {
       const dir = path.join(PROJECTS_DIR, projectKey);
@@ -147,10 +158,11 @@ export class WatcherStore extends EventEmitter {
           if (now - snap.lastActivityAt < RECENT_WINDOW_MS) activeSessionId = snap.sessionId;
         }
       }
+      const cwd = list[0]!.parsed!.snapshot.cwd;
       projects.push({
         projectKey,
-        cwd: list[0]!.parsed!.snapshot.cwd,
-        displayName: projectDisplayName(projectKey),
+        cwd,
+        displayName: projectDisplayName(projectKey, cwd),
         sessionCount: list.length,
         activeSessionId,
         totalTokens: tokens,
