@@ -5,6 +5,11 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { WatcherStore } from "./watcher.ts";
 import { buildAgentDetail, writeAgentDetail } from "./agent-detail.ts";
+import {
+  readEditorFile,
+  scanEditorSources,
+  writeEditorFile,
+} from "./editor.ts";
 import type { DashboardSnapshot, ServerEvent } from "@shared/types.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -147,6 +152,42 @@ async function main(): Promise<void> {
       res.json({ ok: true, status: "launched", projectKey, cwd });
     } catch (err) {
       res.status(500).json({ error: String((err as Error).message ?? err) });
+    }
+  });
+
+  app.get("/api/editor/sources", (_req, res) => {
+    try {
+      res.json(scanEditorSources(lastSnapshot.projects));
+    } catch (err) {
+      res.status(500).json({ error: String((err as Error).message ?? err) });
+    }
+  });
+
+  app.get("/api/editor/file", (req, res) => {
+    const absPath = (req.query.path as string | undefined) ?? "";
+    if (!absPath) {
+      res.status(400).json({ error: "missing path" });
+      return;
+    }
+    try {
+      const file = readEditorFile(absPath, lastSnapshot.projects);
+      res.json(file);
+    } catch (err) {
+      res.status(403).json({ error: String((err as Error).message ?? err) });
+    }
+  });
+
+  app.put("/api/editor/file", (req, res) => {
+    const body = req.body as { path?: string; content?: string };
+    if (!body?.path || typeof body.content !== "string") {
+      res.status(400).json({ error: "expected { path, content }" });
+      return;
+    }
+    try {
+      const file = writeEditorFile(body.path, body.content, lastSnapshot.projects);
+      res.json(file);
+    } catch (err) {
+      res.status(403).json({ error: String((err as Error).message ?? err) });
     }
   });
 
