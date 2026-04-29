@@ -33,6 +33,7 @@ export interface AgentRun {
   prompt?: string;
   outputPreview?: string;
   errorMessage?: string;
+  recentEvents?: TimelineEvent[];
 }
 
 export interface FlowEdge {
