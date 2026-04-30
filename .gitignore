@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.vite/
+.env
+.env.local
+*.log
+
+# Obsidian per-user config (cada dev tem o seu)
+.obsidian/
+
+# Project workspaces (clones de repos externos vão aqui, não trackear)
+projects/*
+!projects/.gitkeep
+
+# vault — estado runtime das tasks (não versionar)
+vault/tasks/inbox/*
+vault/tasks/planning/*
+vault/tasks/ready/*
+vault/tasks/in-progress/*
+vault/tasks/done/*
+vault/tasks/fix/*
+vault/tasks/qa_approved/*
+vault/tasks/versioned/*
+vault/errors/*
+!vault/**/.gitkeep
